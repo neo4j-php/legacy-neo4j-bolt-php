@@ -98,7 +98,7 @@ class Session extends AbstractSession
             $x = $this->io->run($statement, $parameters);
             $results = $this->io->pullAll();
         } catch (MessageException $e) {
-            $exception = new MessageFailureException($e->getCode());
+            $exception = new MessageFailureException($e->getMessage(), $e->getCode(), $e);
             $message = $e->getMessage();
             preg_match('/\(Neo\.[\w\W]*\)$/', $message, $matches);
             $exception->setStatusCode(substr(substr($matches[0], 1), 0, -1));

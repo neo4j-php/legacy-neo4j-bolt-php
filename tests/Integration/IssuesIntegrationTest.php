@@ -22,7 +22,7 @@ class IssuesIntegrationTest extends IntegrationTestCase
             $props['prop'.$i] = $i;
         }
         $this->assertCount(22, $props);
-        $this->getSession()->run('CREATE (n:IssueNode) SET n = {props} RETURN n', ['props' => $props]);
+        $this->getSession()->run('CREATE (n:IssueNode) SET n = $props RETURN n', ['props' => $props]);
     }
 
     /**
@@ -47,12 +47,12 @@ class IssuesIntegrationTest extends IntegrationTestCase
         $timestamp = time() * 1000;
 
         $session = $this->getSession();
-        $result = $session->run('CREATE (n:Node {time: {time} }) RETURN n.time as t', ['time' => $timestamp]);
+        $result = $session->run('CREATE (n:Node {time: $time }) RETURN n.time as t', ['time' => $timestamp]);
         $this->assertEquals($timestamp, $result->firstRecord()->get('t'));
 
         $this->emptyDB();
         $time = 1475921198602;
-        $session->run('CREATE (n:Node) SET n.time = {time}', ['time' => $time]);
+        $session->run('CREATE (n:Node) SET n.time = $time', ['time' => $time]);
         $result = $session->run('MATCH (n:Node) RETURN n.time as t');
         $this->assertEquals($time, $result->firstRecord()->get('t'));
     }

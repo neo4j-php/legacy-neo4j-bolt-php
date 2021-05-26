@@ -18,8 +18,6 @@ class PackingTextIntegrationTest extends IntegrationTestCase
     {
         parent::setUp();
         $this->emptyDB();
-
-        $this->getSession()->run("CREATE INDEX ON :Text(value)");
     }
 
     /**
@@ -54,14 +52,14 @@ class PackingTextIntegrationTest extends IntegrationTestCase
     {
         $session = $this->getSession();
 
-        $q = 'CREATE (n:Text) SET n.value = {value}';
+        $q = 'CREATE (n:Text) SET n.value = $value';
 
         foreach (range($min, $max) as $i) {
             $txt = str_repeat('a', $i);
             $session->run($q, array('value' => $txt));
         }
 
-        $q = 'MATCH (n:Text) WHERE n.value = {value} RETURN n.value as x';
+        $q = 'MATCH (n:Text) WHERE n.value = $value RETURN n.value as x';
 
         foreach (range($min, $max) as $i) {
             $txt = str_repeat('a', $i);

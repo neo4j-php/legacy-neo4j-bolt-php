@@ -38,7 +38,7 @@ class PackingMapsIntegrationTest extends IntegrationTestCase
 
     private function doRangeTest($min, $max)
     {
-        $query = 'CREATE (n:MapTest) SET n += {props} RETURN n';
+        $query = 'CREATE (n:MapTest) SET n += $props RETURN n';
         $session = $this->getSession();
 
         for ($i = $min; $i < $max; ++$i) {

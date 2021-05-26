@@ -70,7 +70,6 @@ class ExceptionDispatchTest extends IntegrationTestCase
     public function testMessageFailuresAreHandledInSequence()
     {
         $session = $this->getSession();
-        $this->createConstraint('User', 'id');
         $session->run('MATCH (n:User) DETACH DELETE n');
         $session->run('CREATE (n:User {id:1})');
         $this->expectException(MessageFailureException::class);
@@ -80,7 +79,6 @@ class ExceptionDispatchTest extends IntegrationTestCase
     public function testMessageFailuresAreHandledInPipelines()
     {
         $session = $this->getSession();
-        $session->run('CREATE CONSTRAINT ON (u:User) ASSERT u.id IS UNIQUE');
         $session->run('MATCH (n:User) DETACH DELETE n');
         $session->run('CREATE (n:User {id:1})');
         $pipeline = $session->createPipeline();
@@ -113,7 +111,6 @@ class ExceptionDispatchTest extends IntegrationTestCase
     public function testPipelinesCanBeRunAfterFailure()
     {
         $session = $this->getSession();
-        $this->createConstraint('User', 'id');
         $session->run('MATCH (n:User) DETACH DELETE n');
         $session->run('CREATE (n:User {id:1})');
         $pipeline = $session->createPipeline();
@@ -139,8 +136,6 @@ class ExceptionDispatchTest extends IntegrationTestCase
         $session = $this->getSession();
 
         $session->run('MATCH (n) DETACH DELETE n');
-        $this->createConstraint('User', 'id');
-        $this->createConstraint('User', 'login');
         $session->run('MERGE (n:User {login: "ikwattro", id:1})');
         $session->run('MERGE (n:User {login: "jexp", id: 2})');
 
