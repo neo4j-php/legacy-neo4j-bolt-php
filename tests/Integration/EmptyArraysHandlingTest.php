@@ -16,11 +16,13 @@ class EmptyArraysHandlingTest extends IntegrationTestCase
     public function testEmptyArrayAsListIsHandled()
     {
         $this->emptyDB();
-        $query = 'MERGE (n:User {id: {id} }) 
-        WITH n
-        UNWIND {friends} AS friend
-        MERGE (f:User {id: friend.name})
-        MERGE (f)-[:KNOWS]->(n)';
+        $query = <<<'CYPHER'
+MERGE (n:User {id: $id }) 
+WITH n
+UNWIND $friends AS friend
+MERGE (f:User {id: friend.name})
+MERGE (f)-[:KNOWS]->(n)
+CYPHER;
 
         $params = ['id' => 'me', 'friends' => Collections::asList([])];
 

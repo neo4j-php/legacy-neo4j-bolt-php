@@ -11,6 +11,7 @@
 
 namespace GraphAware\Bolt\Protocol;
 
+use Bolt\Bolt;
 use GraphAware\Bolt\IO\AbstractIO;
 use GraphAware\Common\Driver\SessionInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -18,7 +19,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 class SessionRegistry
 {
     /**
-     * @var AbstractIO
+     * @var Bolt
      */
     protected $io;
 
@@ -33,10 +34,10 @@ class SessionRegistry
     protected $sessions = [];
 
     /**
-     * @param AbstractIO               $io
+     * @param Bolt               $io
      * @param EventDispatcherInterface $dispatcher
      */
-    public function __construct(AbstractIO $io, EventDispatcherInterface $dispatcher)
+    public function __construct(Bolt $io, EventDispatcherInterface $dispatcher)
     {
         $this->io = $io;
         $this->dispatcher = $dispatcher;

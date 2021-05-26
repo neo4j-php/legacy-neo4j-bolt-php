@@ -20,6 +20,7 @@ use GraphAware\Bolt\Result\Type\UnboundRelationship;
 use GraphAware\Common\Cypher\StatementInterface;
 use GraphAware\Common\Result\AbstractRecordCursor;
 use GraphAware\Common\Result\Record;
+use ReflectionClass;
 use RuntimeException;
 
 class Result extends AbstractRecordCursor
@@ -44,12 +45,9 @@ class Result extends AbstractRecordCursor
         parent::__construct($statement);
     }
 
-    /**
-     * @param Structure $structure
-     */
-    public function pushRecord(Structure $structure)
+    public function pushRecord(array $elements)
     {
-        $elts = $this->array_map_deep($structure->getElements());
+        $elts = $this->array_map_deep($elements);
         $this->records[] = new RecordView($this->fields, $elts);
     }
 
@@ -80,7 +78,7 @@ class Result extends AbstractRecordCursor
      */
     public function setFields(array $fields)
     {
-        $this->fields = $fields['fields'];
+        $this->fields = $fields;
     }
 
     /**
@@ -120,18 +118,14 @@ class Result extends AbstractRecordCursor
     private function array_map_deep(array $array)
     {
         foreach ($array as $k => $v) {
-            if ($v instanceof Structure && $v->getSignature() === 'NODE') {
-                $elts = $v->getElements();
-                $array[$k] = new Node($elts[0], $elts[1], $elts[2]);
-            } elseif ($v instanceof Structure && $v->getSignature() === 'RELATIONSHIP') {
-                $elts = $v->getElements();
-                $array[$k] = new Relationship($elts[0], $elts[1], $elts[2], $elts[3], $elts[4]);
-            } elseif ($v instanceof Structure && $v->getSignature() === 'UNBOUND_RELATIONSHIP') {
-                $elts = $v->getElements();
-                $array[$k] = new UnboundRelationship($elts[0], $elts[1], $elts[2]);
-            } elseif ($v instanceof Structure && $v->getSignature() === 'PATH') {
-                $elts = $v->getElements();
-                $array[$k] = new Path($this->array_map_deep($elts[0]), $this->array_map_deep($elts[1]), $this->array_map_deep($elts[2]));
+            if ($v instanceof \Bolt\structures\Node) {
+                $array[$k] = new Node($v->id(), $v->labels(), $v->properties());
+            } elseif ($v instanceof \Bolt\structures\Relationship) {
+                $array[$k] = new Relationship($v->id(), $v->startNodeId(), $v->endNodeId(), $v->type(), $v->properties());
+            } elseif ($v instanceof \Bolt\structures\UnboundRelationship) {
+                $array[$k] = new UnboundRelationship($v->id(), $v->type(), $v->properties());
+            } elseif ($v instanceof \Bolt\structures\Path) {
+                $array[$k] = new Path($this->array_map_deep($v->nodes()), $this->array_map_deep($v->rels()), $this->array_map_deep($v->ids()));
             } elseif ($v instanceof Structure) {
                 $array[$k] = $this->array_map_deep($v->getElements());
             } elseif (is_array($v)) {

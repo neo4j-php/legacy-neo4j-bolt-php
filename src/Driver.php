@@ -11,14 +11,17 @@
 
 namespace GraphAware\Bolt;
 
+use Bolt\Bolt;
 use GraphAware\Bolt\Exception\IOException;
 use GraphAware\Bolt\IO\StreamSocket;
 use GraphAware\Bolt\Protocol\SessionRegistry;
 use GraphAware\Bolt\PackStream\Packer;
 use GraphAware\Bolt\Protocol\V1\Session;
 use GraphAware\Common\Driver\DriverInterface;
+use phpDocumentor\Reflection\Types\Static_;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use GraphAware\Bolt\Exception\HandshakeException;
+use function parse_url;
 
 class Driver implements DriverInterface
 {
@@ -27,7 +30,7 @@ class Driver implements DriverInterface
     const DEFAULT_TCP_PORT = 7687;
 
     /**
-     * @var StreamSocket
+     * @var Bolt
      */
     protected $io;
 
@@ -40,11 +43,6 @@ class Driver implements DriverInterface
      * @var SessionRegistry
      */
     protected $sessionRegistry;
-
-    /**
-     * @var bool
-     */
-    protected $versionAgreed = false;
 
     /**
      * @var Session
@@ -70,6 +68,7 @@ class Driver implements DriverInterface
      */
     public function __construct($uri, Configuration $configuration = null)
     {
+        $configuration = $configuration === null ? Configuration::create() : $configuration;
         $this->credentials = null !== $configuration ? $configuration->getValue('credentials', []) : [];
         /*
         $ctx = stream_context_create(array());
@@ -92,12 +91,14 @@ class Driver implements DriverInterface
         }
         */
 
-        $config = null !== $configuration ? $configuration : Configuration::create();
         $parsedUri = parse_url($uri);
+
+        $this->credentials['user'] = isset($this->credentials['user']) ? $this->credentials['user'] : $configuration->getValue('user', '');
+        $this->credentials['pass'] = isset($this->credentials['pass']) ? $this->credentials['pass'] : $configuration->getValue('password', '');
         $host = isset($parsedUri['host']) ? $parsedUri['host'] : $parsedUri['path'];
         $port = isset($parsedUri['port']) ? $parsedUri['port'] : static::DEFAULT_TCP_PORT;
         $this->dispatcher = new EventDispatcher();
-        $this->io = StreamSocket::withConfiguration($host, $port, $config, $this->dispatcher);
+        $this->io = new Bolt(new \Bolt\connection\StreamSocket($host, $port, $configuration->getValue('timeout', 15)));
         $this->sessionRegistry = new SessionRegistry($this->io, $this->dispatcher);
         $this->sessionRegistry->registerSession(Session::class);
     }
@@ -107,61 +108,17 @@ class Driver implements DriverInterface
      */
     public function session()
     {
-        if (null !== $this->session) {
-            return $this->session;
-        }
-
-        if (!$this->versionAgreed) {
-            $this->versionAgreed = $this->handshake();
-        }
-
-        $this->session = $this->sessionRegistry->getSession($this->versionAgreed, $this->credentials);
-
-        return $this->session;
+        return new Session($this->io, $this->dispatcher, $this->credentials);
     }
 
-    /**
-     * @return int
-     *
-     * @throws HandshakeException
-     */
     public function handshake()
     {
-        $packer = new Packer();
-
-        if (!$this->io->isConnected()) {
-            $this->io->reconnect();
+        if ($this->credentials['user'] === '') {
+            $this->io->setScheme('none');
+        } else {
+            $this->io->setScheme('basic');
         }
 
-        $msg = '';
-        $msg .= chr(0x60).chr(0x60).chr(0xb0).chr(0x17);
-
-        foreach (array(1, 0, 0, 0) as $v) {
-            $msg .= $packer->packBigEndian($v, 4);
-        }
-
-        try {
-            $this->io->write($msg);
-            $rawHandshakeResponse = $this->io->read(4);
-            $response = unpack('N', $rawHandshakeResponse);
-            $version = $response[1];
-
-            if (0 === $version) {
-                $this->throwHandshakeException(sprintf('Handshake Exception. Unable to negotiate a version to use. Proposed versions were %s',
-                    json_encode(array(1, 0, 0, 0))));
-            }
-
-            return $version;
-        } catch (IOException $e) {
-            $this->throwHandshakeException($e->getMessage());
-        }
-    }
-
-    /**
-     * @param string $message
-     */
-    private function throwHandshakeException($message)
-    {
-        throw new HandshakeException($message);
+        $this->io->init(static::getUserAgent(), $this->credentials['user'], $this->credentials['pass']);
     }
 }

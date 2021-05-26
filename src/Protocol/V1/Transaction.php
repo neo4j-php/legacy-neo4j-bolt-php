@@ -80,7 +80,7 @@ class Transaction implements TransactionInterface
     {
         $this->assertNotClosed();
         $this->assertStarted();
-        $this->session->run('ROLLBACK');
+        $this->session->rollback();
         $this->closed = true;
         $this->state = self::ROLLED_BACK;
         $this->session->transaction = null;
@@ -116,7 +116,7 @@ class Transaction implements TransactionInterface
     public function begin()
     {
         $this->assertNotStarted();
-        $this->session->run('BEGIN');
+        $this->session->begin();
         $this->state = self::OPENED;
     }
 
@@ -165,7 +165,7 @@ class Transaction implements TransactionInterface
     {
         $this->assertNotClosed();
         $this->assertStarted();
-        $this->session->run('COMMIT');
+        $this->session->commit();
         $this->state = self::COMMITED;
         $this->closed = true;
         $this->session->transaction = null;

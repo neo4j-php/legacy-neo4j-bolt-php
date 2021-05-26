@@ -11,6 +11,7 @@
 
 namespace GraphAware\Bolt\Protocol;
 
+use Bolt\Bolt;
 use GraphAware\Bolt\IO\AbstractIO;
 use GraphAware\Bolt\PackStream\Serializer;
 use GraphAware\Bolt\PackStream\StreamChannel;
@@ -21,7 +22,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 abstract class AbstractSession implements SessionInterface
 {
     /**
-     * @var AbstractIO
+     * @var Bolt
      */
     protected $io;
 
@@ -31,58 +32,12 @@ abstract class AbstractSession implements SessionInterface
     protected $dispatcher;
 
     /**
-     * @var Serializer
-     */
-    protected $serializer;
-
-    /**
-     * @var Packer
-     */
-    protected $packer;
-
-    /**
-     * @var Unpacker
-     */
-    protected $unpacker;
-
-    /**
-     * @var ChunkWriter
-     */
-    protected $writer;
-
-    /**
-     * @var StreamChannel
-     */
-    protected $streamChannel;
-
-    /**
-     * @param AbstractIO               $io
+     * @param Bolt $bolt
      * @param EventDispatcherInterface $dispatcher
      */
-    public function __construct(AbstractIO $io, EventDispatcherInterface $dispatcher)
+    public function __construct(Bolt $bolt, EventDispatcherInterface $dispatcher)
     {
-        $this->io = $io;
+        $this->io = $bolt;
         $this->dispatcher = $dispatcher;
-        $this->packer = new Packer();
-        $this->streamChannel = new StreamChannel($io);
-        $this->unpacker = new Unpacker($this->streamChannel);
-        $this->serializer = new Serializer($this->packer, $this->unpacker);
-        $this->writer = new ChunkWriter($this->io, $this->packer);
-    }
-
-    /**
-     * @return Serializer
-     */
-    public function getSerializer()
-    {
-        return $this->serializer;
-    }
-
-    /**
-     * @return ChunkWriter
-     */
-    public function getWriter()
-    {
-        return $this->writer;
     }
 }

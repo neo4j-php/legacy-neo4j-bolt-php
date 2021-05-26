@@ -11,6 +11,10 @@
 
 namespace GraphAware\Bolt\Protocol\V1;
 
+use BadMethodCallException;
+use Bolt\Bolt;
+use Bolt\error\MessageException;
+use Exception;
 use GraphAware\Bolt\Driver;
 use GraphAware\Bolt\Exception\BoltInvalidArgumentException;
 use GraphAware\Bolt\IO\AbstractIO;
@@ -24,8 +28,15 @@ use GraphAware\Bolt\Protocol\Message\RunMessage;
 use GraphAware\Bolt\Protocol\Pipeline;
 use GraphAware\Bolt\Exception\MessageFailureException;
 use GraphAware\Bolt\Result\Result as CypherResult;
+use GraphAware\Common\Collection\ArrayList;
+use GraphAware\Common\Collection\Map;
 use GraphAware\Common\Cypher\Statement;
+use Laudis\Neo4j\Network\Bolt\BoltDriver;
+use stdClass;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use function array_pop;
+use function preg_match;
+use function substr;
 
 class Session extends AbstractSession
 {
@@ -47,11 +58,11 @@ class Session extends AbstractSession
     protected $credentials;
 
     /**
-     * @param AbstractIO               $io
+     * @param Bolt $io
      * @param EventDispatcherInterface $dispatcher
-     * @param array                    $credentials
+     * @param array $credentials
      */
-    public function __construct(AbstractIO $io, EventDispatcherInterface $dispatcher, array $credentials)
+    public function __construct(Bolt $io, EventDispatcherInterface $dispatcher, array $credentials)
     {
         parent::__construct($io, $dispatcher);
 
@@ -72,67 +83,43 @@ class Session extends AbstractSession
      */
     public function run($statement, array $parameters = array(), $tag = null)
     {
-        if (null === $statement) {
-            //throw new BoltInvalidArgumentException("Statement cannot be null");
-        }
-        $messages = array(
-            new RunMessage($statement, $parameters),
-        );
-
-        $messages[] = new PullAllMessage();
-        $this->sendMessages($messages);
-
-        $runResponse = new Response();
-        $r = $this->unpacker->unpack();
-
-        if ($r->isSuccess()) {
-            $runResponse->onSuccess($r);
-        } elseif ($r->isFailure()) {
-            try {
-                $runResponse->onFailure($r);
-            } catch (MessageFailureException $e) {
-                // server ignores the PULL ALL
-                $this->handleIgnore();
-                $this->sendMessage(new AckFailureMessage());
-                // server success for ACK FAILURE
-                $r2 = $this->handleSuccess();
-                throw $e;
+        foreach ($parameters as $i => $parameter) {
+            if ($parameter instanceof ArrayList) {
+                $parameters[$i] = array_values($parameter->getElements());
+            } elseif ($parameter instanceof Map) {
+                $object = new stdClass();
+                foreach ($parameter->getElements() as $key => $value) {
+                    $object->$key = $value;
+                }
+                $parameters[$i] = $object;
             }
         }
-
-        $pullResponse = new Response();
-
-        while (!$pullResponse->isCompleted()) {
-            $r = $this->unpacker->unpack();
-
-            if ($r->isRecord()) {
-                $pullResponse->onRecord($r);
-            }
-
-            if ($r->isSuccess()) {
-                $pullResponse->onSuccess($r);
-            }
-
-            if ($r->isFailure()) {
-                $pullResponse->onFailure($r);
-            }
+        try {
+            $x = $this->io->run($statement, $parameters);
+            $results = $this->io->pullAll();
+        } catch (MessageException $e) {
+            $exception = new MessageFailureException($e->getCode());
+            $message = $e->getMessage();
+            preg_match('/\(Neo\.[\w\W]*\)$/', $message, $matches);
+            $exception->setStatusCode(substr(substr($matches[0], 1), 0, -1));
+            $this->io->rollback();
+            $this->isInitialized = false;
+            $this->init();
+            throw $exception;
         }
 
         $cypherResult = new CypherResult(Statement::create($statement, $parameters, $tag));
-        $cypherResult->setFields($runResponse->getMetadata()[0]->getElements());
+        $cypherResult->setFields($x['fields'] ?? []);
 
-        foreach ($pullResponse->getRecords() as $record) {
-            $cypherResult->pushRecord($record);
+        $meta = array_pop($results);
+        foreach ($results as $result) {
+            $cypherResult->pushRecord($result);
         }
 
-        $pullMeta = $pullResponse->getMetadata();
-
-        if (isset($pullMeta[0])) {
-            if (isset($pullMeta[0]->getElements()['stats'])) {
-                $cypherResult->setStatistics($pullResponse->getMetadata()[0]->getElements()['stats']);
-            } else {
-                $cypherResult->setStatistics([]);
-            }
+        if (isset($meta['stats'])) {
+            $cypherResult->setStatistics($meta['stats']);
+        } else {
+            $cypherResult->setStatistics([]);
         }
 
         return $cypherResult;
@@ -154,68 +141,15 @@ class Session extends AbstractSession
     }
 
     /**
-     * @param string      $statement
-     * @param array       $parameters
+     * @param string $statement
+     * @param array $parameters
      * @param null|string $tag
      *
      * @return CypherResult
      */
     public function recv($statement, array $parameters = array(), $tag = null)
     {
-        $runResponse = new Response();
-        $r = $this->unpacker->unpack();
-        $shouldThrow = false;
-        if ($r->isFailure()) {
-            try {
-                $runResponse->onFailure($r);
-            } catch (MessageFailureException $e) {
-                // server ignores the PULL ALL
-                $this->handleIgnore();
-                $this->handleIgnore();
-                $this->sendMessage(new AckFailureMessage());
-                $this->handleIgnore();
-                // server success for ACK FAILURE
-                $r2 = $this->handleSuccess();
-                $shouldThrow = $e;
-            }
-        }
-
-        if ($shouldThrow !== false) {
-            throw $shouldThrow;
-        }
-
-        if ($r->isSuccess()) {
-            $runResponse->onSuccess($r);
-        }
-
-        $pullResponse = new Response();
-
-        while (!$pullResponse->isCompleted()) {
-            $r = $this->unpacker->unpack();
-
-            if ($r->isRecord()) {
-                $pullResponse->onRecord($r);
-            }
-
-            if ($r->isSuccess()) {
-                $pullResponse->onSuccess($r);
-            }
-        }
-
-        $cypherResult = new CypherResult(Statement::create($statement, $parameters, $tag));
-        $cypherResult->setFields($runResponse->getMetadata()[0]->getElements());
-
-        foreach ($pullResponse->getRecords() as $record) {
-            $cypherResult->pushRecord($record);
-        }
-
-        if (null !== $pullResponse && array_key_exists(0, $pullResponse->getMetadata())) {
-            $metadata = $pullResponse->getMetadata()[0]->getElements();
-            $stats = array_key_exists('stats', $metadata) ? $metadata['stats'] : array();
-            $cypherResult->setStatistics($stats);
-        }
-
-        return $cypherResult;
+        return $this->run($statement, $parameters, $tag);
     }
 
     /**
@@ -223,14 +157,7 @@ class Session extends AbstractSession
      */
     public function init()
     {
-        $this->io->assertConnected();
-        $ua = Driver::getUserAgent();
-        $this->sendMessage(new InitMessage($ua, $this->credentials));
-        $responseMessage = $this->receiveMessageInit();
-
-        if ($responseMessage->getSignature() != 'SUCCESS') {
-            throw new \Exception('Unable to INIT');
-        }
+        $this->io->init(Driver::getUserAgent(), $this->credentials['user'], $this->credentials['pass']);
 
         $this->isInitialized = true;
     }
@@ -240,34 +167,7 @@ class Session extends AbstractSession
      */
     public function receiveMessageInit()
     {
-        $bytes = '';
-        $chunkHeader = $this->io->read(2);
-        list(, $chunkSize) = unpack('n', $chunkHeader);
-        $nextChunkLength = $chunkSize;
-
-        do {
-            if ($nextChunkLength) {
-                $bytes .= $this->io->read($nextChunkLength);
-            }
-
-            list(, $next) = unpack('n', $this->io->read(2));
-            $nextChunkLength = $next;
-        } while ($nextChunkLength > 0);
-
-        $rawMessage = new RawMessage($bytes);
-
-        $message = $this->serializer->deserialize($rawMessage);
-
-        if ($message->getSignature() === 'FAILURE') {
-            $msg = sprintf('Neo4j Exception "%s" with code "%s"', $message->getElements()['message'], $message->getElements()['code']);
-            $e = new MessageFailureException($msg);
-            $e->setStatusCode($message->getElements()['code']);
-            $this->sendMessage(new AckFailureMessage());
-
-            throw $e;
-        }
-
-        return $message;
+        throw new BadMethodCallException('Method unsupported');
     }
 
     /**
@@ -275,33 +175,7 @@ class Session extends AbstractSession
      */
     public function receiveMessage()
     {
-        $bytes = '';
-
-        $chunkHeader = $this->io->read(2);
-        list(, $chunkSize) = unpack('n', $chunkHeader);
-        $nextChunkLength = $chunkSize;
-
-        do {
-            if ($nextChunkLength) {
-                $bytes .= $this->io->read($nextChunkLength);
-            }
-
-            list(, $next) = unpack('n', $this->io->read(2));
-            $nextChunkLength = $next;
-        } while ($nextChunkLength > 0);
-
-        $rawMessage = new RawMessage($bytes);
-        $message = $this->serializer->deserialize($rawMessage);
-
-        if ($message->getSignature() === 'FAILURE') {
-            $msg = sprintf('Neo4j Exception "%s" with code "%s"', $message->getElements()['message'], $message->getElements()['code']);
-            $e = new MessageFailureException($msg);
-            $e->setStatusCode($message->getElements()['code']);
-
-            throw $e;
-        }
-
-        return $message;
+        throw new BadMethodCallException('Method unsupported');
     }
 
     /**
@@ -309,7 +183,7 @@ class Session extends AbstractSession
      */
     public function sendMessage(AbstractMessage $message)
     {
-        $this->sendMessages(array($message));
+        throw new BadMethodCallException('Method unsupported');
     }
 
     /**
@@ -317,11 +191,7 @@ class Session extends AbstractSession
      */
     public function sendMessages(array $messages)
     {
-        foreach ($messages as $message) {
-            $this->serializer->serialize($message);
-        }
-
-        $this->writer->writeMessages($messages);
+        throw new BadMethodCallException('Method unsupported');
     }
 
     /**
@@ -329,7 +199,7 @@ class Session extends AbstractSession
      */
     public function close()
     {
-        $this->io->close();
+        $this->io->reset();
         $this->isInitialized = false;
     }
 
@@ -345,23 +215,18 @@ class Session extends AbstractSession
         return new Transaction($this);
     }
 
-    private function handleSuccess()
+    public function commit()
     {
-        return $this->handleMessage('SUCCESS');
+        $this->io->commit();
     }
 
-    private function handleIgnore()
+    public function rollback()
     {
-        $this->handleMessage('IGNORED');
+        $this->io->rollback();
     }
 
-    private function handleMessage($messageType)
+    public function begin()
     {
-        $message = $this->unpacker->unpack();
-        if ($messageType !== $message->getSignature()) {
-            throw new \RuntimeException(sprintf('Expected an %s message, got %s', $messageType, $message->getSignature()));
-        }
-
-        return $message;
+        $this->io->begin();
     }
 }

@@ -49,7 +49,7 @@ class ExceptionDispatchTest extends IntegrationTestCase
             //
         }
 
-        $result = $session->run('CREATE (n) RETURN n');
+        $result = $session->run('MERGE (n:Node) SET n.id = 1 RETURN n');
         $this->assertTrue($result->firstRecord()->get('n') instanceof Node);
     }
 
