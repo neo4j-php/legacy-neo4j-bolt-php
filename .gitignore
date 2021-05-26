@@ -3,3 +3,4 @@ test.php
 composer.lock
 phpunit.xml
 .idea/
+.phpunit.result.cache
