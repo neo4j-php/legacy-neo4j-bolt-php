@@ -20,9 +20,4 @@ class HandshakeIntegrationTest extends IntegrationTestCase
         $this->assertInstanceOf(SessionInterface::class, $session);
         $this->assertEquals(1, $session::getProtocolVersion());
     }
-
-    public function testErrorIsThrownWhenNoVersionCanBeAgreed()
-    {
-        // needs some refactoring for mocking the session registry
-    }
 }

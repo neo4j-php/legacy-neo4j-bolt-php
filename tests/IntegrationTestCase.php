@@ -3,8 +3,9 @@
 namespace GraphAware\Bolt\Tests;
 
 use GraphAware\Bolt\GraphDatabase;
+use PHPUnit\Framework\TestCase;
 
-class IntegrationTestCase extends \PHPUnit_Framework_TestCase
+class IntegrationTestCase extends TestCase
 {
     /**
      * @var \GraphAware\Bolt\Driver
@@ -14,9 +15,9 @@ class IntegrationTestCase extends \PHPUnit_Framework_TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
-        $this->driver = GraphDatabase::driver("bolt://localhost");
+        $this->driver = GraphDatabase::driver("bolt://neo4j");
     }
 
     /**

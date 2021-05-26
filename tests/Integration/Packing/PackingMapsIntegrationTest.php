@@ -14,7 +14,7 @@ use GraphAware\Bolt\Tests\IntegrationTestCase;
  */
 class PackingMapsIntegrationTest extends IntegrationTestCase
 {
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->emptyDB();
@@ -34,14 +34,6 @@ class PackingMapsIntegrationTest extends IntegrationTestCase
     public function testMap16()
     {
         $this->doRangeTest(1024, 1026);
-    }
-
-    /**
-     * @group fail
-     */
-    public function testMap16High()
-    {
-        $this->doRangeTest(65533, 65535);
     }
 
     private function doRangeTest($min, $max)

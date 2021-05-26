@@ -14,7 +14,7 @@ use GraphAware\Bolt\Tests\IntegrationTestCase;
  */
 class PackingTextIntegrationTest extends IntegrationTestCase
 {
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
         $this->emptyDB();
@@ -48,18 +48,6 @@ class PackingTextIntegrationTest extends IntegrationTestCase
         $this->doRangeTest(2048, 2050);
         //$this->doRangeTest(16351, 16383);
         //$this->doRangeTest(65500, 65535);
-    }
-
-    /**
-     * @group text32
-     * @group fail
-     * @group stringx
-     */
-    public function testText32Packing()
-    {
-        //$this->markTestSkipped("Neo4j3.0M02 has issues with 64 bits texts");
-        //$this->doRangeTest(65537, 65537);
-        //$this->doRangeTest(500000, 500000);
     }
 
     public function doRangeTest($min, $max)

@@ -32,7 +32,7 @@ class IssuesIntegrationTest extends IntegrationTestCase
     {
         $config = Configuration::create()
             ->bindToInterface('0:0');
-        $driver = GraphDatabase::driver('bolt://localhost:7687', $config);
+        $driver = GraphDatabase::driver('bolt://neo4j:7687', $config);
         $result = $driver->session()->run('MATCH (n) RETURN count(n)');
         $this->assertInstanceOf(Result::class, $result);
     }

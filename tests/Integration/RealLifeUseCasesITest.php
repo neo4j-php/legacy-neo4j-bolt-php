@@ -31,6 +31,7 @@ class RealLifeUseCasesITest extends IntegrationTestCase
         MERGE (p)-[:KNOWS]->(o)';
 
         $this->getSession()->run($query, ['batches' => $batches]);
+        $this->assertTrue(true);
     }
 
     /**
