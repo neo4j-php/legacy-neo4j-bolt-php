@@ -1,10 +1,8 @@
 ## Neo4j Bolt PHP
 
-PHP low level Driver for Neo4j's Bolt Remoting Protocol
+## ⚠️ Warning ⚠️
 
-[![Build Status](https://travis-ci.org/graphaware/neo4j-bolt-php.svg?branch=master)](https://travis-ci.org/graphaware/neo4j-bolt-php)
-
----
+This is a legacy api. This project exists to ️allow people to quickly get up and running with newer versions of neo4j in existing projects. For the newest drivers and latest features, please visit the [neo4j php client](https://github.com/neo4j-php/neo4j-php-client) on the [neo4j-php](https://github.com/neo4j-php) github page. There is also a lower level driver available under the name [Bolt](https://github.com/neo4j-php/Bolt)
 
 ### References :
 
@@ -13,7 +11,7 @@ PHP low level Driver for Neo4j's Bolt Remoting Protocol
 
 ### Requirements:
 
-* PHP5.6+
+* PHP7.0+
 * Neo4j3.0
 * PHP Sockets extension available
 * `bcmath` extension
