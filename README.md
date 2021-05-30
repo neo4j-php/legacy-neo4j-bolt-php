@@ -4,16 +4,11 @@
 
 This is a legacy api. This project exists to ️allow people to quickly get up and running with newer versions of neo4j in existing projects. For the newest drivers and latest features, please visit the [neo4j php client](https://github.com/neo4j-php/neo4j-php-client) on the [neo4j-php](https://github.com/neo4j-php) github page. There is also a lower level driver available under the name [Bolt](https://github.com/neo4j-php/Bolt)
 
-### References :
-
-* PHP Client embedding Bolt along with the http driver (recommended way of using Neo4j in PHP) : https://github.com/graphaware/neo4j-php-client
-* Neo4j 3.0 : http://neo4j.com/docs
-
 ### Requirements:
 
-* PHP7.0+
-* Neo4j3.0
-* PHP Sockets extension available
+* PHP ^7.0 || ^8.0
+* Neo4j ^3.0 || ^4.0
+* `sockets` extension
 * `bcmath` extension
 * `mbstring` extension
 
@@ -22,7 +17,7 @@ This is a legacy api. This project exists to ️allow people to quickly get up a
 Require the package in your dependencies :
 
 ```bash
-composer require graphaware/neo4j-bolt
+composer require laudis/graphaware-neo4j-bolt-legacy
 ```
 
 ### Setting up a driver and creating a session
@@ -91,27 +86,3 @@ $config = \GraphAware\Bolt\Configuration::newInstance()
 $driver = \GraphAware\Bolt\GraphDatabase::driver('bolt://hobomjfhocgbkeenl.dbs.graphenedb.com:24786', $config);
 $session = $driver->session();
 ```
-
-### License
-
-Copyright (c) 2015-2016 GraphAware Ltd
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is furnished
-to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
----
