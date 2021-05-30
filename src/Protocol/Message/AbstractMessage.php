@@ -11,7 +11,7 @@
 
 namespace GraphAware\Bolt\Protocol\Message;
 
-abstract class AbstractMessage implements MessageInterface
+abstract class AbstractMessage
 {
     /**
      * @var string

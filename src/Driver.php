@@ -12,15 +12,12 @@
 namespace GraphAware\Bolt;
 
 use Bolt\Bolt;
-use GraphAware\Bolt\Exception\IOException;
-use GraphAware\Bolt\IO\StreamSocket;
+use Bolt\connection\StreamSocket;
+use Exception;
 use GraphAware\Bolt\Protocol\SessionRegistry;
-use GraphAware\Bolt\PackStream\Packer;
 use GraphAware\Bolt\Protocol\V1\Session;
 use GraphAware\Common\Driver\DriverInterface;
-use phpDocumentor\Reflection\Types\Static_;
 use Symfony\Component\EventDispatcher\EventDispatcher;
-use GraphAware\Bolt\Exception\HandshakeException;
 use function parse_url;
 
 class Driver implements DriverInterface
@@ -63,8 +60,9 @@ class Driver implements DriverInterface
     }
 
     /**
-     * @param string             $uri
+     * @param string $uri
      * @param Configuration|null $configuration
+     * @throws Exception
      */
     public function __construct($uri, Configuration $configuration = null)
     {
@@ -93,20 +91,21 @@ class Driver implements DriverInterface
 
         $parsedUri = parse_url($uri);
 
-        $this->credentials['user'] = isset($this->credentials['user']) ? $this->credentials['user'] : $configuration->getValue('user', '');
-        $this->credentials['pass'] = isset($this->credentials['pass']) ? $this->credentials['pass'] : $configuration->getValue('password', '');
-        $host = isset($parsedUri['host']) ? $parsedUri['host'] : $parsedUri['path'];
-        $port = isset($parsedUri['port']) ? $parsedUri['port'] : static::DEFAULT_TCP_PORT;
+        $this->credentials['user'] = $this->credentials['user'] ?? $configuration->getValue('user', '');
+        $this->credentials['pass'] = $this->credentials['pass'] ?? $configuration->getValue('password', '');
+        $host = $parsedUri['host'] ?? $parsedUri['path'];
+        $port = $parsedUri['port'] ?? static::DEFAULT_TCP_PORT;
         $this->dispatcher = new EventDispatcher();
-        $this->io = new Bolt(new \Bolt\connection\StreamSocket($host, $port, $configuration->getValue('timeout', 15)));
+        $this->io = new Bolt(new StreamSocket($host, $port, $configuration->getValue('timeout', 15)));
         $this->sessionRegistry = new SessionRegistry($this->io, $this->dispatcher);
         $this->sessionRegistry->registerSession(Session::class);
     }
 
     /**
      * @return Session
+     * @throws Exception
      */
-    public function session()
+    public function session(): Session
     {
         return new Session($this->io, $this->dispatcher, $this->credentials);
     }

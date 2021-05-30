@@ -54,8 +54,6 @@ class Pipeline implements PipelineInterface
      */
     public function run()
     {
-        $pullAllMessage = new PullAllMessage();
-        $batch = [];
         $resultCollection = new ResultCollection();
 
         foreach ($this->messages as $message) {

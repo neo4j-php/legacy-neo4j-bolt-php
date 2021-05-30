@@ -12,11 +12,6 @@
 namespace GraphAware\Bolt\Protocol;
 
 use Bolt\Bolt;
-use GraphAware\Bolt\IO\AbstractIO;
-use GraphAware\Bolt\PackStream\Serializer;
-use GraphAware\Bolt\PackStream\StreamChannel;
-use GraphAware\Bolt\PackStream\Unpacker;
-use GraphAware\Bolt\PackStream\Packer;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 abstract class AbstractSession implements SessionInterface

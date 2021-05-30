@@ -11,27 +11,18 @@
 
 namespace GraphAware\Bolt\Protocol\V1;
 
-use BadMethodCallException;
 use Bolt\Bolt;
 use Bolt\error\MessageException;
 use Exception;
 use GraphAware\Bolt\Driver;
-use GraphAware\Bolt\Exception\BoltInvalidArgumentException;
-use GraphAware\Bolt\IO\AbstractIO;
 use GraphAware\Bolt\Protocol\AbstractSession;
-use GraphAware\Bolt\Protocol\Message\AbstractMessage;
-use GraphAware\Bolt\Protocol\Message\AckFailureMessage;
-use GraphAware\Bolt\Protocol\Message\InitMessage;
-use GraphAware\Bolt\Protocol\Message\PullAllMessage;
-use GraphAware\Bolt\Protocol\Message\RawMessage;
-use GraphAware\Bolt\Protocol\Message\RunMessage;
 use GraphAware\Bolt\Protocol\Pipeline;
 use GraphAware\Bolt\Exception\MessageFailureException;
 use GraphAware\Bolt\Result\Result as CypherResult;
 use GraphAware\Common\Collection\ArrayList;
 use GraphAware\Common\Collection\Map;
 use GraphAware\Common\Cypher\Statement;
-use Laudis\Neo4j\Network\Bolt\BoltDriver;
+use RuntimeException;
 use stdClass;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use function array_pop;
@@ -61,6 +52,7 @@ class Session extends AbstractSession
      * @param Bolt $io
      * @param EventDispatcherInterface $dispatcher
      * @param array $credentials
+     * @throws Exception
      */
     public function __construct(Bolt $io, EventDispatcherInterface $dispatcher, array $credentials)
     {
@@ -70,18 +62,15 @@ class Session extends AbstractSession
         $this->init();
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public static function getProtocolVersion()
+    public static function getProtocolVersion(): string
     {
         return self::PROTOCOL_VERSION;
     }
 
     /**
-     * {@inheritdoc}
+     * @throws Exception
      */
-    public function run($statement, array $parameters = array(), $tag = null)
+    public function run($statement, array $parameters = array(), $tag = null): CypherResult
     {
         foreach ($parameters as $i => $parameter) {
             if ($parameter instanceof ArrayList) {
@@ -135,25 +124,21 @@ class Session extends AbstractSession
     /**
      * {@inheritdoc}
      */
-    public function createPipeline($query = null, array $parameters = [], $tag = null)
+    public function createPipeline($query = null, array $parameters = [], $tag = null): Pipeline
     {
         return new Pipeline($this);
     }
 
     /**
-     * @param string $statement
-     * @param array $parameters
-     * @param null|string $tag
-     *
-     * @return CypherResult
+     * @throws Exception
      */
-    public function recv($statement, array $parameters = array(), $tag = null)
+    public function recv($statement, array $parameters = array(), $tag = null): CypherResult
     {
         return $this->run($statement, $parameters, $tag);
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function init()
     {
@@ -163,39 +148,7 @@ class Session extends AbstractSession
     }
 
     /**
-     * @return \GraphAware\Bolt\PackStream\Structure\Structure
-     */
-    public function receiveMessageInit()
-    {
-        throw new BadMethodCallException('Method unsupported');
-    }
-
-    /**
-     * @return \GraphAware\Bolt\PackStream\Structure\Structure
-     */
-    public function receiveMessage()
-    {
-        throw new BadMethodCallException('Method unsupported');
-    }
-
-    /**
-     * @param \GraphAware\Bolt\Protocol\Message\AbstractMessage $message
-     */
-    public function sendMessage(AbstractMessage $message)
-    {
-        throw new BadMethodCallException('Method unsupported');
-    }
-
-    /**
-     * @param \GraphAware\Bolt\Protocol\Message\AbstractMessage[] $messages
-     */
-    public function sendMessages(array $messages)
-    {
-        throw new BadMethodCallException('Method unsupported');
-    }
-
-    /**
-     * {@inheritdoc}
+     * @throws Exception
      */
     public function close()
     {
@@ -203,28 +156,34 @@ class Session extends AbstractSession
         $this->isInitialized = false;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function transaction()
+    public function transaction(): Transaction
     {
         if ($this->transaction instanceof Transaction) {
-            throw new \RuntimeException('A transaction is already bound to this session');
+            throw new RuntimeException('A transaction is already bound to this session');
         }
 
         return new Transaction($this);
     }
 
+    /**
+     * @throws Exception
+     */
     public function commit()
     {
         $this->io->commit();
     }
 
+    /**
+     * @throws Exception
+     */
     public function rollback()
     {
         $this->io->rollback();
     }
 
+    /**
+     * @throws Exception
+     */
     public function begin()
     {
         $this->io->begin();

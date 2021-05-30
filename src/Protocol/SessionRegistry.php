@@ -12,7 +12,6 @@
 namespace GraphAware\Bolt\Protocol;
 
 use Bolt\Bolt;
-use GraphAware\Bolt\IO\AbstractIO;
 use GraphAware\Common\Driver\SessionInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -60,7 +59,7 @@ class SessionRegistry
     /**
      * @return array
      */
-    public function getSupportedVersions()
+    public function getSupportedVersions(): array
     {
         return array_keys($this->sessions);
     }
@@ -70,7 +69,7 @@ class SessionRegistry
      *
      * @return bool
      */
-    public function supportsVersion($version)
+    public function supportsVersion($version): bool
     {
         return array_key_exists((int) $version, $this->sessions);
     }
@@ -81,7 +80,7 @@ class SessionRegistry
      *
      * @return SessionInterface
      */
-    public function getSession($version, array $credentials)
+    public function getSession($version, array $credentials): SessionInterface
     {
         $v = (int) $version;
 
